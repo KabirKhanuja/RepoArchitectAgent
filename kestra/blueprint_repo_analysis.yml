@@ -1,0 +1,33 @@
+id: repo_architect_agent
+namespace: repoarchitectagent
+
+inputs:
+  - name: repo_url
+    type: STRING
+
+tasks:
+  - id: clone
+    type: io.kestra.plugin.git.Clone
+    inputs:
+      url: "{{ inputs.repo_url }}"
+      branch: main
+
+  - id: analyze
+    type: io.kestra.plugin.scripts.python.Script
+    containerImage: python:3.11
+    beforeCommands:
+      - pip install -r requirements.txt || true
+    script: |
+      python api/analyze_repo.py --repo . --out runs/$(date +%Y%m%d%H%M%S)/repo_shape.json
+
+  - id: generate_diagram
+    type: io.kestra.plugin.scripts.node.Script
+    containerImage: node:18
+    script: |
+      node api/generate_mermaid.js runs/$(date +%Y%m%d%H%M%S)/repo_shape.json runs/$(date +%Y%m%d%H%M%S)/diagram.mmd
+
+  - id: generate_ci
+    type: io.kestra.plugin.scripts.node.Script
+    containerImage: node:18
+    script: |
+      node api/generate_ci.js runs/$(date +%Y%m%d%H%M%S)/repo_shape.json runs/$(date +%Y%m%d%H%M%S)/generated-ci.yml

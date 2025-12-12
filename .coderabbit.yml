@@ -1,0 +1,5 @@
+version: 1
+rules:
+  - name: no-console-in-prod
+    description: Avoid console logs in production code.
+    files: ["web/**"]
