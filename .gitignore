@@ -1,45 +1,232 @@
-# Node / Next.js
+# ============================================================================
+# RepoArchitectAgent .gitignore - Clean commits without build artifacts
+# ============================================================================
+
+# ---- Node.js ----
 node_modules/
-.npm/
-.pnpm-store/
-yarn.lock
-
-# Build output
-.next/
-.out/
-dist/
-
-# Env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-logs/
-*.log
+.npm
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+lerna-debug.log
+*.tsbuildinfo
 
-# Editor / OS
-.DS_Store
-.vscode/
-.idea/
-*.swp
-*.swo
+# ---- Next.js ----
+.next/
+out/
+web/.next/
+web/out/
+build/
+web/build/
+.vercel
+.vercel.json
 
-# Python
+# ---- Python ----
 __pycache__/
 *.py[cod]
-*.pyo
-.venv/
+*$py.class
+*.so
+.Python
 venv/
+ENV/
+env/
+.venv
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Kestra / run artifacts
+# ---- IDE & Editors ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.editorconfig.local
+*.iml
+*.class
+.classpath
+
+# ---- Environment & Secrets ----
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+web/.env.local
+*.env
+secrets.json
+credentials.json
+*.key
+*.pem
+*.pub
+*.crt
+
+# ---- Generated & Temporary Files ----
 runs/
+demo/runs/
+demo/samples/artifacts/
+temp/
+temp_repo/
+temp_*
+*.tmp
+*.backup
+*.bak
+.cache/
+.temp_repo/
+integration_*/
 
-# Misc
-coverage/
+# ---- Analysis Output ----
+repo_shape.json
+diagram.mmd
+ci-generated.yml
+summary.json
+prompts.md
+INTEGRATION_REPORT.md
+analysis.json
+ANALYSIS_RESULTS.md
+
+# ---- Logs ----
+logs/
+*.log
+pids/
 *.pid
+*.seed
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ---- Test Coverage ----
+coverage/
+htmlcov/
+.nyc_output/
+.coverage
+.pytest_cache/
+jest-results.json
+
+# ---- OS Files ----
+.AppleDouble
+.LSOverride
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+$RECYCLE.BIN/
+ehthumbs.db
+Desktop.ini
+.Thumbs.db
+.Trash-*
+.directory
+
+# ---- Package Manager ----
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# ---- Build Outputs ----
+dist/
+build/
+out/
+
+# ---- Git Temporary ----
+.git/temp
+.git/objects/tmp_*
+temp_git_*
+
+# ---- Databases ----
+*.db
+*.sqlite
+*.sqlite3
+local.db
+
+# ---- Cache Files ----
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# ---- Windows Specific ----
+*.lnk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Keep These Files ----
+!demo/samples/
+!demo/samples/*.md
+!docs/
+!scripts/
+.git/
+
+# OS specific
+Thumbs.db
+desktop.ini
+._*
+.AppleDouble
+.LSOverride
+
+# Credentials (extra safety)
+**/secrets.*
+**/credentials.*
+private_key*
+ssh_keys/
+tokens/
+
+# Lock files (optional - uncomment if you want to commit)
+# yarn.lock
+# package-lock.json
+
+# Large files
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# macOS
+.AppleDouble
+.LSOverride
+.AppleDB
+.AppleDesktop
+
+# Vercel
+.vercel/
+
+# IDE settings (generated)
+.vscode/settings.json
+.idea/workspace.xml
+.idea/tasks.xml
+
+# Dependencies that shouldn't be committed
+node_modules/
+.pnpm-lock.yaml
+
+# Stashed files
+stash/
+
+# Generated files
+generated/
+auto-generated/
