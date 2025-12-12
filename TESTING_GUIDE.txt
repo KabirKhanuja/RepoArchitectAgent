@@ -1,0 +1,845 @@
+================================================================================
+  REPOARCHITECTAGENT - COMPREHENSIVE TESTING GUIDE FOR TEAMS
+================================================================================
+
+This document provides step-by-step instructions for team members to validate
+all features of RepoArchitectAgent before deployment.
+
+CREATED: December 2025
+STATUS: READY FOR TEAM TESTING
+SCOPE: 15/18 completed features (83% complete)
+
+================================================================================
+SECTION 1: PREREQUISITES & SETUP
+================================================================================
+
+Before running any tests, ensure your environment is configured correctly.
+
+1.1 SYSTEM REQUIREMENTS
+  ✓ Python 3.11+ (check: python --version)
+  ✓ Node.js 18+ (check: node --version)
+  ✓ npm 9+ (check: npm --version)
+  ✓ Git 2.0+ (check: git --version)
+  ✓ 2GB+ free disk space
+  ✓ Internet connection (for remote repo cloning)
+
+1.2 CLONE THE REPOSITORY
+  $ git clone https://github.com/your-org/RepoArchitectAgent
+  $ cd RepoArchitectAgent
+
+1.3 INSTALL DEPENDENCIES
+  $ cd web
+  $ npm install --legacy-peer-deps
+  $ cd ..
+
+1.4 OPTIONAL: API KEYS (Not Required for Testing)
+  If testing AI features, create web/.env.local with:
+    GITHUB_TOKEN=ghp_xxxx...         # For PR creation
+    OUMI_API_KEY=oumi_sk_xxxx...     # For AI summaries
+    OPENAI_API_KEY=sk-proj-xxxx...   # Fallback LLM
+
+  NOTE: All tests work WITHOUT API keys. These are optional enhancements.
+
+================================================================================
+SECTION 2: QUICK VALIDATION (5 minutes)
+================================================================================
+
+Run this first to verify everything is working.
+
+2.1 TEST THE CORE ANALYSIS ENGINE
+  $ python api/analyze_repo.py "."
+  
+  Expected Output:
+    ✓ Should analyze RepoArchitectAgent repository
+    ✓ Should detect 3+ languages (Python, JavaScript, TypeScript)
+    ✓ Should detect 5+ frameworks (Node.js, npm, React, etc.)
+    ✓ Should find 90+ files
+    ✓ Should create runs/latest/repo_shape.json
+    ✓ Should complete in <15 seconds
+
+  If This Fails:
+    - Check Python version: python --version
+    - Check current directory: pwd (should be RepoArchitectAgent root)
+    - Check Git is installed: git --version
+    - On Windows: May need admin permissions for temp directory
+
+2.2 TEST DIAGRAM GENERATION
+  $ node api/generate_mermaid.js runs/latest/repo_shape.json runs/latest
+  
+  Expected Output:
+    ✓ Should generate diagram.mmd file
+    ✓ Should contain mermaid graph syntax
+    ✓ Should have 40+ lines
+    ✓ Should show languages, frameworks, dependencies
+    ✓ File size should be 2KB - 5KB
+
+  Verify:
+    $ cat runs/latest/diagram.mmd
+    (You should see Mermaid syntax with graph structure)
+
+2.3 TEST CI GENERATION
+  $ node api/generate_ci.js runs/latest/repo_shape.json runs/latest
+  
+  Expected Output:
+    ✓ Should generate ci-generated.yml file
+    ✓ Should contain GitHub Actions syntax
+    ✓ Should have 100+ lines
+    ✓ Should include Node.js and Python jobs
+    ✓ File size should be 3KB - 6KB
+
+  Verify:
+    $ cat runs/latest/ci-generated.yml
+    (You should see YAML GitHub Actions workflow)
+
+2.4 TEST WEB UI (Dev Server)
+  $ cd web
+  $ npm run dev
+  
+  Expected Output:
+    ✓ Should compile without errors
+    ✓ Should start listening on http://localhost:3000
+    ✓ Terminal shows "ready - started server on 0.0.0.0:3000"
+
+  In Browser (http://localhost:3000):
+    ✓ Should show "RepoArchitectAgent" title
+    ✓ Should have GitHub URL input field
+    ✓ Should have "Analyze Repository" button
+    ✓ Should have dark theme styling
+    ✓ Should be responsive on mobile (resize browser)
+
+  Test Interaction:
+    1. Type "." in the GitHub URL field (or "web" for web directory)
+    2. Click "Analyze Repository"
+    3. Should show progress indicator
+    4. Should display results after analysis completes
+    5. Should show repository statistics
+    6. Should display generated diagram in viewer
+
+  Verify UI Elements:
+    ✓ Title appears correctly
+    ✓ Input field accepts text
+    ✓ Button is clickable
+    ✓ Results section appears with data
+    ✓ Mermaid diagram renders properly
+    ✓ Dark theme applies to all elements
+
+  Stop Server: Press Ctrl+C in terminal
+
+================================================================================
+SECTION 3: COMPONENT TESTING (30 minutes)
+================================================================================
+
+Test each major component independently.
+
+3.1 TEST: Repository Analysis (Python)
+  File: api/analyze_repo.py
+  Purpose: Parse repository structure, detect languages/frameworks
+  
+  Test Case 1: Analyze Root Directory
+    $ python api/analyze_repo.py "."
+    Expected:
+      - Detects Python, JavaScript, TypeScript
+      - Finds 90+ files
+      - Identifies frameworks: React, Next.js, Node.js, npm
+      - Shows dependencies correctly
+      - Creates output in runs/latest/repo_shape.json
+      - Completes successfully in <15 seconds
+  
+  Test Case 2: Analyze Subdirectory
+    $ python api/analyze_repo.py "web"
+    Expected:
+      - Detects JavaScript, TypeScript
+      - Finds 15-20 files in web directory
+      - Identifies React, Next.js frameworks
+      - Shows Next.js configuration
+      - Creates output in runs/latest/repo_shape.json
+  
+  Test Case 3: Analyze Local Repo
+    $ python api/analyze_repo.py "api"
+    Expected:
+      - Detects Python, JavaScript
+      - Finds helper scripts and modules
+      - Works on any valid directory
+  
+  Success Criteria:
+    ✓ All three test cases complete without errors
+    ✓ Output JSON is valid and readable
+    ✓ Language detection is accurate
+    ✓ No permission errors (Windows: may need admin)
+    ✓ Temporary files cleaned up after analysis
+
+3.2 TEST: Diagram Generation (Node.js)
+  File: api/generate_mermaid.js
+  Purpose: Transform analysis JSON into Mermaid diagram
+  
+  Prerequisites:
+    $ python api/analyze_repo.py "."
+  
+  Test Case 1: Generate Basic Diagram
+    $ node api/generate_mermaid.js runs/latest/repo_shape.json runs/latest
+    Expected:
+      - Creates diagram.mmd file
+      - Contains valid Mermaid syntax
+      - Shows language boxes with icons
+      - Shows framework relationships
+      - Properly formatted, 40+ lines
+  
+  Test Case 2: Verify Diagram Structure
+    $ cat runs/latest/diagram.mmd
+    Expected Output Contains:
+      - graph LR or similar Mermaid structure
+      - Language names (JavaScript, Python, etc.)
+      - Framework names (React, Next.js, etc.)
+      - API endpoints (if found)
+      - Proper linking syntax (-->)
+  
+  Success Criteria:
+    ✓ File is created successfully
+    ✓ Mermaid syntax is valid
+    ✓ Can be rendered in Mermaid viewers
+    ✓ Shows all detected languages/frameworks
+    ✓ No errors in console output
+
+3.3 TEST: CI/CD Template Generation (Node.js)
+  File: api/generate_ci.js
+  Purpose: Generate GitHub Actions workflows
+  
+  Prerequisites:
+    $ python api/analyze_repo.py "."
+  
+  Test Case 1: Generate CI Template
+    $ node api/generate_ci.js runs/latest/repo_shape.json runs/latest
+    Expected:
+      - Creates ci-generated.yml file
+      - Contains valid YAML syntax
+      - Includes multiple job strategies
+      - 100+ lines of workflow definition
+  
+  Test Case 2: Verify YAML Structure
+    $ cat runs/latest/ci-generated.yml
+    Expected Output Contains:
+      - name: CI Pipeline
+      - on: [push, pull_request]
+      - jobs: section
+      - runs-on: ubuntu-latest
+      - steps with actual commands
+      - Node.js version matrix
+      - Python version handling
+      - Install and test commands
+  
+  Test Case 3: Validate YAML Syntax
+    - Copy ci-generated.yml to local .github/workflows/test.yml
+    - Push to GitHub
+    - Verify GitHub Actions recognizes it (no syntax errors in UI)
+  
+  Success Criteria:
+    ✓ File is created successfully
+    ✓ Valid YAML syntax (can be parsed)
+    ✓ Includes appropriate CI steps
+    ✓ Has error tolerance (|| echo commands)
+    ✓ Multiple language support
+
+3.4 TEST: AI Summary Generation (Node.js - Optional)
+  File: api/generate_summary.js
+  Purpose: Generate AI-powered repository summaries
+  
+  Prerequisites:
+    $ python api/analyze_repo.py "."
+    (Optional) Set OUMI_API_KEY or OPENAI_API_KEY in web/.env.local
+  
+  Test Case 1: Without API Keys (Graceful Degradation)
+    $ node api/generate_summary.js runs/latest/repo_shape.json runs/latest
+    Expected:
+      - Should PASS without API keys
+      - Should NOT create summary.json (expected behavior)
+      - Should print message about missing keys
+      - Should exit with code 0 (success)
+  
+  Test Case 2: With Oumi API Key
+    (If OUMI_API_KEY is set)
+    $ node api/generate_summary.js runs/latest/repo_shape.json runs/latest
+    Expected:
+      - Should create summary.json
+      - Should contain repository description
+      - Should list top hotspots
+      - Should provide onboarding guide
+      - Should complete in <30 seconds
+  
+  Test Case 3: With OpenAI API Key
+    (If OPENAI_API_KEY is set, Oumi not set)
+    $ node api/generate_summary.js runs/latest/repo_shape.json runs/latest
+    Expected:
+      - Should create summary.json (using OpenAI fallback)
+      - Should contain similar structure as Oumi output
+      - May take 5-10 seconds longer
+  
+  Success Criteria:
+    ✓ Works without API keys (graceful degradation)
+    ✓ Works with Oumi API key (if provided)
+    ✓ Works with OpenAI fallback
+    ✓ Output JSON is valid
+    ✓ Summary text is coherent
+
+3.5 TEST: PR Creation (Node.js - Optional)
+  File: api/open_pr.js
+  Purpose: Automatically create GitHub pull requests
+  
+  Prerequisites:
+    - GitHub token set as GITHUB_TOKEN in web/.env.local
+    - Permission to create PRs in a test repository
+  
+  Test Case 1: Without GitHub Token (Graceful Degradation)
+    $ node api/open_pr.js . "test-branch" "Add CI Pipeline"
+    Expected:
+      - Should explain that GitHub token is needed
+      - Should exit gracefully (not crash)
+      - Should suggest fallback methods
+  
+  Test Case 2: With GitHub Token
+    (If GITHUB_TOKEN is set)
+    $ node api/open_pr.js . "test-branch" "Add CI Pipeline"
+    Expected:
+      - Should create pull request in repository
+      - PR should contain generated CI template
+      - PR should have proper title and description
+      - Should return PR URL and number
+  
+  Success Criteria:
+    ✓ Handles missing tokens gracefully
+    ✓ Creates PR when token is provided
+    ✓ PR has correct content
+    ✓ PR is mergeable
+
+================================================================================
+SECTION 4: INTEGRATION TESTING (45 minutes)
+================================================================================
+
+Test the complete end-to-end pipeline.
+
+4.1 FULL PIPELINE TEST (Local Repository)
+  This tests all components working together.
+  
+  Step 1: Clean Up Previous Runs
+    $ rm -rf runs/latest
+    $ mkdir -p runs/latest
+  
+  Step 2: Run Complete Analysis Pipeline
+    $ python api/analyze_repo.py "."
+    $ node api/generate_mermaid.js runs/latest/repo_shape.json runs/latest
+    $ node api/generate_ci.js runs/latest/repo_shape.json runs/latest
+    $ node api/generate_summary.js runs/latest/repo_shape.json runs/latest
+  
+  Step 3: Verify All Outputs Exist
+    $ ls -la runs/latest/
+    Expected Files:
+      ✓ repo_shape.json (5KB - 15KB)
+      ✓ diagram.mmd (2KB - 5KB)
+      ✓ ci-generated.yml (3KB - 6KB)
+      ✓ summary.json (optional, if API key provided)
+  
+  Step 4: Validate Output Quality
+    
+    repo_shape.json:
+      $ cat runs/latest/repo_shape.json | head -20
+      Expected:
+        - Valid JSON syntax
+        - "languages" array with 2+ entries
+        - "frameworks" array with 3+ entries
+        - "file_count" showing 80+ files
+        - "total_lines" showing file statistics
+    
+    diagram.mmd:
+      $ cat runs/latest/diagram.mmd
+      Expected:
+        - Valid Mermaid syntax
+        - graph or flowchart declaration
+        - Multiple connected nodes
+        - Language and framework labels
+    
+    ci-generated.yml:
+      $ cat runs/latest/ci-generated.yml | head -30
+      Expected:
+        - Valid YAML structure
+        - GitHub Actions job definitions
+        - Multiple test matrix entries
+        - Proper indentation
+  
+  Success Criteria:
+    ✓ All 3-4 files generated
+    ✓ All files contain valid content
+    ✓ Pipeline completes in <30 seconds
+    ✓ No errors in any step
+    ✓ Output can be used in GitHub Actions
+
+4.2 DEMO SCRIPT TEST
+  This tests the automated demo runner.
+  
+  Run Demo:
+    $ bash scripts/run_demo.sh
+  
+  Expected Output:
+    - Should analyze 3 sample repositories
+    - Should generate artifacts for each
+    - Should create demo/runs/[timestamp]/ directory
+    - Should complete in 2-5 minutes
+  
+  Verify Artifacts:
+    $ ls -la demo/runs/latest/
+    Expected:
+      ✓ 3 timestamped directories (one per repo)
+      ✓ Each containing repo_shape.json
+      ✓ Each containing diagram.mmd
+      ✓ Each containing ci-generated.yml
+  
+  Success Criteria:
+    ✓ Demo runs without errors
+    ✓ All 3 repos analyzed successfully
+    ✓ All artifacts generated
+    ✓ Demo completes in reasonable time
+
+4.3 INTEGRATION TEST SUITE
+  This runs comprehensive integration tests.
+  
+  Run Tests:
+    $ bash scripts/test_integration.sh
+  
+  Expected Output:
+    - Should test 8 components
+    - Should verify file generation
+    - Should check content validity
+    - Should display results in INTEGRATION_REPORT.md
+  
+  View Results:
+    $ cat INTEGRATION_REPORT.md
+    Expected:
+      ✓ 8/8 components tested
+      ✓ All tests passing (green checkmarks)
+      ✓ No critical failures
+      ✓ Performance metrics included
+  
+  Success Criteria:
+    ✓ All 8 components pass tests
+    ✓ Report is generated
+    ✓ No blocking failures
+    ✓ Performance is acceptable
+
+================================================================================
+SECTION 5: DEPLOYMENT TESTING (15 minutes)
+================================================================================
+
+Test deployment-specific functionality.
+
+5.1 GITHUB ACTIONS WORKFLOW TEST
+  
+  Prerequisites:
+    - Push code to development branch
+    - Repository has .github/workflows/analyze-repo.yml
+  
+  Trigger Workflow:
+    - Push a commit to development branch
+    - Or manually trigger via GitHub Actions UI
+  
+  In GitHub UI:
+    1. Go to Actions tab
+    2. Click "Analyze Repository" workflow
+    3. Click "Run workflow" → "Run workflow"
+    4. Wait for completion (2-3 minutes)
+  
+  Expected Results:
+    ✓ Workflow starts successfully
+    ✓ All steps complete without errors
+    ✓ Analysis JSON artifact is available
+    ✓ Workflow takes <5 minutes total
+  
+  Verify Artifacts:
+    - Download analysis results from workflow
+    - Verify repo_shape.json is valid
+    - Check file sizes and content
+
+5.2 WEB UI DEPLOYMENT TEST
+  
+  Development Mode:
+    $ cd web
+    $ npm run dev
+    ✓ Should start on http://localhost:3000
+    ✓ Should compile without errors
+    ✓ Should have hot reload working
+  
+  Production Build:
+    $ cd web
+    $ npm run build
+    Expected:
+      ✓ Build completes without errors
+      ✓ .next/ directory created
+      ✓ Next.js exports ready for deployment
+      ✓ Build size acceptable (<100MB)
+  
+  Production Preview:
+    $ npm run start
+    Expected:
+      ✓ Production server starts
+      ✓ http://localhost:3000 is accessible
+      ✓ Performance is good
+      ✓ All features work in production mode
+
+================================================================================
+SECTION 6: ERROR HANDLING & EDGE CASES (20 minutes)
+================================================================================
+
+Test error handling and boundary conditions.
+
+6.1 INVALID INPUT HANDLING
+  
+  Test Case 1: Non-existent Directory
+    $ python api/analyze_repo.py "/nonexistent/path"
+    Expected:
+      ✓ Should handle gracefully
+      ✓ Should print error message
+      ✓ Should exit cleanly (no crash)
+  
+  Test Case 2: Invalid JSON Input
+    $ node api/generate_mermaid.js "/invalid/path.json" runs/latest
+    Expected:
+      ✓ Should handle error gracefully
+      ✓ Should provide helpful error message
+      ✓ Should not crash application
+
+6.2 EDGE CASE HANDLING
+  
+  Large Repository:
+    $ python api/analyze_repo.py "."
+    (Run on a large open-source repository if available)
+    Expected:
+      ✓ Should complete in reasonable time (<30s)
+      ✓ Should handle 100+ files
+      ✓ Should detect complex tech stacks
+  
+  Empty Directory:
+    $ mkdir test_empty
+    $ python api/analyze_repo.py "test_empty"
+    Expected:
+      ✓ Should complete without errors
+      ✓ Should handle gracefully
+      ✓ Should show minimal output
+  
+  Directory with Special Characters:
+    $ mkdir "test-dir_with-chars"
+    $ python api/analyze_repo.py "test-dir_with-chars"
+    Expected:
+      ✓ Should handle special characters
+      ✓ Should not crash
+
+6.3 MISSING OPTIONAL FEATURES
+  
+  Test Without GITHUB_TOKEN:
+    Verify:
+      ✓ Analysis still works
+      ✓ Diagram generation works
+      ✓ CI generation works
+      ✓ Only PR creation is skipped
+  
+  Test Without API Keys:
+    Verify:
+      ✓ All core features work
+      ✓ Only AI summary is skipped
+      ✓ System degrades gracefully
+
+================================================================================
+SECTION 7: PERFORMANCE TESTING (10 minutes)
+================================================================================
+
+Verify performance meets expectations.
+
+7.1 ANALYSIS SPEED
+  Run:
+    $ time python api/analyze_repo.py "."
+  
+  Expected:
+    ✓ Completes in <15 seconds on local repo
+    ✓ Memory usage stays under 500MB
+    ✓ CPU utilization is reasonable
+  
+  Record Results:
+    - Time: _____ seconds
+    - Memory: _____ MB
+    - Status: ✓ Pass / ✗ Fail
+
+7.2 DIAGRAM GENERATION SPEED
+  Run:
+    $ time node api/generate_mermaid.js runs/latest/repo_shape.json runs/latest
+  
+  Expected:
+    ✓ Completes in <2 seconds
+    ✓ Output file <10KB
+  
+  Record Results:
+    - Time: _____ seconds
+    - File size: _____ KB
+    - Status: ✓ Pass / ✗ Fail
+
+7.3 CI GENERATION SPEED
+  Run:
+    $ time node api/generate_ci.js runs/latest/repo_shape.json runs/latest
+  
+  Expected:
+    ✓ Completes in <2 seconds
+    ✓ Output file <10KB
+  
+  Record Results:
+    - Time: _____ seconds
+    - File size: _____ KB
+    - Status: ✓ Pass / ✗ Fail
+
+7.4 WEB UI RESPONSIVENESS
+  Test:
+    1. Start web UI: npm run dev
+    2. Open DevTools → Performance tab
+    3. Click "Analyze Repository" button
+    4. Record load times
+  
+  Expected:
+    ✓ Initial page load <1 second
+    ✓ Analyze button response <100ms
+    ✓ Results display <3 seconds
+    ✓ Mermaid diagram renders <2 seconds
+  
+  Record Results:
+    - Page load: _____ ms
+    - Button response: _____ ms
+    - Results display: _____ ms
+    - Diagram render: _____ ms
+
+================================================================================
+SECTION 8: SECURITY TESTING (10 minutes)
+================================================================================
+
+Verify security best practices.
+
+8.1 ENVIRONMENT VARIABLES
+  Check:
+    ✓ No API keys in source code
+    ✓ All keys are in .env.local (in .gitignore)
+    ✓ Sample .env.example exists with no values
+  
+  Verify:
+    $ grep -r "OUMI_API_KEY" --include="*.js" --include="*.ts" api/
+    Expected: Should not find hardcoded keys
+    $ grep -r "GITHUB_TOKEN" --include="*.js" --include="*.ts" api/
+    Expected: Should not find hardcoded keys
+
+8.2 DEPENDENCY SECURITY
+  Check Node.js Dependencies:
+    $ cd web
+    $ npm audit
+    Expected:
+      ✓ No critical vulnerabilities
+      ✓ High vulnerabilities resolved
+  
+  Check Python Dependencies:
+    $ pip check
+    Expected:
+      ✓ All dependencies are compatible
+      ✓ No version conflicts
+
+8.3 FILE PERMISSIONS
+  Check:
+    ✓ Scripts have execute permissions: chmod +x scripts/*.sh
+    ✓ Build artifacts not committed (.next/, node_modules/)
+    ✓ Sensitive files are in .gitignore
+
+================================================================================
+SECTION 9: TEAM HANDOFF CHECKLIST
+================================================================================
+
+Before declaring testing complete, verify:
+
+Pre-Testing Checklist:
+  ☐ All prerequisites installed (Python 3.11+, Node 18+, Git, npm)
+  ☐ Repository cloned successfully
+  ☐ Dependencies installed without errors
+  ☐ All tests run from clean state
+
+Quick Validation Complete:
+  ☐ Analysis test passed (<15 seconds)
+  ☐ Diagram generation passed
+  ☐ CI generation passed
+  ☐ Web UI started without errors
+
+Component Testing Complete:
+  ☐ Repository analysis working
+  ☐ Diagram generation working
+  ☐ CI template generation working
+  ☐ AI summary generation working (with API keys)
+  ☐ PR creation working (with GitHub token)
+
+Integration Testing Complete:
+  ☐ Full pipeline test passed
+  ☐ Demo script executed successfully
+  ☐ Integration test suite passed (8/8 components)
+
+Deployment Testing Complete:
+  ☐ GitHub Actions workflow can be triggered
+  ☐ Web UI development mode works
+  ☐ Web UI production build succeeds
+
+Error Handling Verified:
+  ☐ Invalid inputs handled gracefully
+  ☐ Missing API keys don't break pipeline
+  ☐ Optional features degrade gracefully
+
+Performance Validated:
+  ☐ Analysis completes in <15 seconds
+  ☐ Diagram generation in <2 seconds
+  ☐ CI generation in <2 seconds
+  ☐ Web UI is responsive
+
+Security Confirmed:
+  ☐ No API keys in source code
+  ☐ All keys use .env.local
+  ☐ .gitignore properly configured
+  ☐ No critical npm vulnerabilities
+
+================================================================================
+SECTION 10: TROUBLESHOOTING & COMMON ISSUES
+================================================================================
+
+10.1 PYTHON ISSUES
+  
+  "ModuleNotFoundError: No module named 'subprocess'"
+    → Python standard library issue; reinstall Python
+  
+  "[WinError 5] Access is denied" on Windows
+    → Run terminal as Administrator
+    → Or use Git Bash instead of Command Prompt
+  
+  "git clone timeout"
+    → Network issue; check internet connection
+    → Try cloning with: git config --global http.postBuffer 157286400
+
+10.2 NODE.JS ISSUES
+  
+  "npm ERR! code ERESOLVE, ERESOLVE unable to resolve dependency"
+    → Use: npm install --legacy-peer-deps
+  
+  "Port 3000 already in use"
+    → Kill existing process: lsof -ti:3000 | xargs kill -9
+    → Or use different port: PORT=3001 npm run dev
+  
+  ".next folder doesn't exist after npm run build"
+    → Try: npm run build again
+    → Check disk space (need 500MB+)
+
+10.3 API KEY ISSUES
+  
+  "API key not found" error
+    → Verify .env.local is in web/ directory
+    → Verify key format is correct
+    → Try without API key (should work anyway)
+  
+  "OpenAI/Oumi API error"
+    → Check API key has correct permissions
+    → Check account has credits remaining
+    → Try fallback: if Oumi fails, try OpenAI
+
+10.4 FILE SYSTEM ISSUES
+  
+  "Permission denied" on scripts
+    → Run: chmod +x scripts/*.sh
+  
+  "No such file or directory"
+    → Check current directory: pwd
+    → Should be in RepoArchitectAgent root
+    → Try: cd /path/to/RepoArchitectAgent
+
+10.5 GIT ISSUES
+  
+  "fatal: not a git repository"
+    → System is trying to clone a non-git directory
+    → Use local path instead: python api/analyze_repo.py "web"
+  
+  "fatal: unable to access repository"
+    → Network issue or GitHub rate limit
+    → Wait a few minutes and retry
+    → Try: git config --global user.name "Your Name"
+
+================================================================================
+SECTION 11: REPORTING RESULTS
+================================================================================
+
+When you've completed testing, please report:
+
+TO: [Your Team Lead]
+SUBJECT: RepoArchitectAgent Testing Complete - [Your Name]
+
+TEST SUMMARY:
+  Total Test Cases: 30+
+  Passed: __ / 30
+  Failed: __ / 30
+  Skipped: __ / 30
+
+QUICK VALIDATION RESULTS:
+  ✓/✗ Core Analysis Engine
+  ✓/✗ Diagram Generation
+  ✓/✗ CI/CD Generation
+  ✓/✗ Web UI
+
+COMPONENT TESTS:
+  ✓/✗ Repository Analysis (Python)
+  ✓/✗ Diagram Generation (Mermaid)
+  ✓/✗ CI/CD Templates (YAML)
+  ✓/✗ AI Summaries (LLM)
+  ✓/✗ PR Creation (GitHub)
+  ✓/✗ Web Interface (Next.js)
+
+INTEGRATION:
+  ✓/✗ Full Pipeline
+  ✓/✗ Demo Script
+  ✓/✗ Integration Tests
+
+PERFORMANCE:
+  Analysis: ___ seconds (target: <15s)
+  Diagrams: ___ seconds (target: <2s)
+  CI Gen: ___ seconds (target: <2s)
+  Web UI: ___ ms (target: <3s)
+
+ISSUES FOUND:
+  1. [Description]
+     Severity: Critical / High / Medium / Low
+     Impact: [Impact description]
+     Workaround: [Workaround if any]
+  
+  2. ...
+
+NOTES:
+  [Any additional observations, blockers, or improvements]
+
+RECOMMENDATION:
+  ☐ Ready for deployment
+  ☐ Ready with minor fixes
+  ☐ Needs more testing
+
+Tested by: ________________
+Date: ________________
+
+================================================================================
+SECTION 12: SUCCESS CRITERIA
+================================================================================
+
+Testing is COMPLETE when:
+
+✅ All 15 core features are working
+✅ At least 8/8 integration components pass
+✅ All 4 sponsor tools are integrated
+✅ No critical blocker issues remain
+✅ Performance meets <15 second analysis target
+✅ Security vulnerabilities are <high severity
+✅ Team is confident in deployment readiness
+✅ Test report is submitted to team lead
+
+================================================================================
+END OF TESTING GUIDE
+================================================================================
+
+Last Updated: December 2025
+Questions? See docs/ folder or contact your team lead.
+Ready to deploy when all checkboxes above are verified!
