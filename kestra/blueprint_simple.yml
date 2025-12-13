@@ -1,0 +1,75 @@
+id: repo_architect_agent
+namespace: default
+description: RepoArchitectAgent - Automated repository analysis pipeline
+
+inputs:
+  - id: repo_url
+    type: STRING
+    description: GitHub repository URL (e.g., https://github.com/owner/repo)
+    required: true
+
+tasks:
+  - id: analyze_repo
+    type: io.kestra.plugin.scripts.shell.Script
+    description: Run repository analysis using Python
+    env:
+      RUN_DIR: "runs/latest"
+      REPO_URL: "{{ inputs.repo_url }}"
+    script: |
+      #!/bin/bash
+      set -e
+      
+      echo "[*] Starting repository analysis..."
+      mkdir -p $RUN_DIR
+      
+      python api/analyze_repo.py "$REPO_URL" "$RUN_DIR"
+      
+      echo "[+] Repository analysis complete"
+      
+  - id: generate_diagram
+    type: io.kestra.plugin.scripts.shell.Script
+    description: Generate Mermaid diagram from analysis
+    env:
+      RUN_DIR: "runs/latest"
+    script: |
+      #!/bin/bash
+      
+      echo "[*] Generating Mermaid diagram..."
+      node api/generate_mermaid.js "$RUN_DIR/repo_shape.json" "$RUN_DIR"
+      
+      echo "[+] Diagram generated"
+    
+  - id: generate_ci
+    type: io.kestra.plugin.scripts.shell.Script
+    description: Generate GitHub Actions CI YAML
+    env:
+      RUN_DIR: "runs/latest"
+    script: |
+      #!/bin/bash
+      
+      echo "[*] Generating CI pipeline..."
+      node api/generate_ci.js "$RUN_DIR/repo_shape.json" "$RUN_DIR"
+      
+      echo "[+] CI pipeline generated"
+
+  - id: report
+    type: io.kestra.plugin.scripts.shell.Script
+    description: Generate final report
+    env:
+      RUN_DIR: "runs/latest"
+      REPO_URL: "{{ inputs.repo_url }}"
+    script: |
+      #!/bin/bash
+      
+      echo "=== RepoArchitectAgent Analysis Report ==="
+      echo "Repository: $REPO_URL"
+      echo "Output Directory: $RUN_DIR"
+      echo ""
+      echo "=== Generated Artifacts ==="
+      
+      [ -f "$RUN_DIR/repo_shape.json" ] && echo "✓ repo_shape.json - Repository structure"
+      [ -f "$RUN_DIR/diagram.mmd" ] && echo "✓ diagram.mmd - Architecture diagram"
+      [ -f "$RUN_DIR/ci-generated.yml" ] && echo "✓ ci-generated.yml - GitHub Actions workflow"
+      
+      echo ""
+      echo "Analysis complete!"

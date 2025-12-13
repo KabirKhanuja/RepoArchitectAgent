@@ -1,0 +1,84 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: 📦 Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: 🏗️ Build project
+        run: |
+          cd web
+          npm install --legacy-peer-deps
+          npm run build
+        continue-on-error: false
+
+      - name: ✅ Lint check (optional)
+        run: |
+          cd web
+          npm run lint 2>/dev/null || echo "Lint check skipped"
+        continue-on-error: true
+
+      - name: 🚀 Deploy Preview (on PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          cd web
+          DEPLOYMENT_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm 2>&1 | grep -oP '(?<=https://)[^ ]+' | head -1 || echo "deployment-pending")
+          echo "PREVIEW_URL=https://$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+        id: preview
+        continue-on-error: true
+
+      - name: 💬 Comment preview URL on PR
+        if: github.event_name == 'pull_request' && steps.preview.outputs.PREVIEW_URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **Preview Deployment Ready!**\n\nView your changes: ${{ steps.preview.outputs.PREVIEW_URL }}`
+            });
+        continue-on-error: true
+
+      - name: 🎯 Deploy Production (on main push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd web
+          echo "Deploying to production..."
+          vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --confirm
+        continue-on-error: false
+
+      - name: ✅ Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📱 **Preview**: ${{ steps.preview.outputs.PREVIEW_URL }}" >> $GITHUB_STEP_SUMMARY

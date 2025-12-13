@@ -1,0 +1,89 @@
+{
+  "repo_url": "https://github.com/example/fullstack-app",
+  "analyzed_at": "2025-12-12T10:30:45Z",
+  "analysis_version": "1.0",
+  "languages": {
+    "TypeScript": 156,
+    "JavaScript": 89,
+    "Python": 34,
+    "CSS": 23,
+    "JSON": 18,
+    "YAML": 12,
+    "Markdown": 15,
+    "Shell": 8,
+    "HTML": 5
+  },
+  "frameworks": {
+    "React": "18.2.0",
+    "Next.js": "14.0.4",
+    "TypeScript": "5.3.0",
+    "Tailwind CSS": "3.4.0",
+    "Node.js": "18.19.0",
+    "Python": "3.11",
+    "Flask": "2.3.0",
+    "SQLAlchemy": "2.0.0"
+  },
+  "package_managers": {
+    "npm": true,
+    "yarn": false,
+    "pip": true,
+    "poetry": false
+  },
+  "dependencies": {
+    "npm": [
+      "react@18.2.0",
+      "next@14.0.4",
+      "typescript@5.3.0",
+      "tailwindcss@3.4.0",
+      "axios@1.6.0",
+      "zustand@4.4.0",
+      "react-hook-form@7.48.0"
+    ],
+    "pip": [
+      "flask==2.3.0",
+      "sqlalchemy==2.0.0",
+      "requests==2.31.0",
+      "python-dotenv==1.0.0"
+    ]
+  },
+  "file_structure": {
+    "total_files": 280,
+    "total_directories": 52,
+    "largest_directory": "node_modules (excluded from analysis)"
+  },
+  "api_endpoints": [
+    "GET /api/analyze",
+    "GET /api/projects/:id",
+    "POST /api/projects",
+    "PUT /api/projects/:id",
+    "DELETE /api/projects/:id",
+    "GET /api/health",
+    "POST /api/auth/login",
+    "POST /api/auth/logout"
+  ],
+  "build_tools": [
+    "npm",
+    "git",
+    "docker"
+  ],
+  "version_control": "git",
+  "testing_framework": "jest",
+  "linters": [
+    "eslint",
+    "prettier"
+  ],
+  "key_directories": {
+    "web/": "Next.js frontend application",
+    "api/": "Python backend services",
+    "components/": "React components library",
+    "pages/": "Next.js pages and routing",
+    "tests/": "Test suites",
+    "docs/": "Documentation"
+  },
+  "deployment": {
+    "frontend": "Vercel",
+    "backend": "Docker/Cloud Run"
+  },
+  "estimated_complexity": "medium",
+  "technology_stack": "Full-stack JavaScript/TypeScript with Python backend, React frontend, Next.js framework"
+}

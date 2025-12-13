@@ -1,5 +1,5 @@
 id: repo_architect_agent
-namespace: repoarchitectagent
+namespace: default
 description: >
   Complete repository analysis pipeline for RepoArchitectAgent.
   Analyzes GitHub repos, generates architecture diagrams, CI pipelines, and opens PRs.
@@ -20,7 +20,7 @@ inputs:
     type: STRING
     description: Timestamp for run artifacts
     required: false
-    default: "{{ now | date('yyyyMMdd-HHmmss') }}"
+    defaults: "{{ now | date('yyyyMMdd-HHmmss') }}"
 
 # Define variables
 variables:

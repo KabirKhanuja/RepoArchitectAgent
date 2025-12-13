@@ -1,0 +1,71 @@
+{
+  "summary": "This is a full-stack Next.js application combining React frontend with Python backend services. It provides project management capabilities with API endpoints for CRUD operations. The architecture uses TypeScript for type safety, Tailwind CSS for styling, and SQLAlchemy for database management.",
+  "key_technologies": [
+    "React 18.2 + TypeScript",
+    "Next.js 14 with App Router",
+    "Tailwind CSS for styling",
+    "Python Flask backend",
+    "SQLAlchemy ORM",
+    "Zustand for state management"
+  ],
+  "hotspots": [
+    {
+      "file": "api/models.py",
+      "type": "backend",
+      "importance": "critical",
+      "description": "Core database models and schema definitions using SQLAlchemy. Contains Project, User, and Task models with relationships."
+    },
+    {
+      "file": "web/pages/api/projects.ts",
+      "type": "api-route",
+      "importance": "high",
+      "description": "API route handler for project CRUD operations. Main integration point between frontend and backend."
+    },
+    {
+      "file": "components/ProjectList.tsx",
+      "type": "frontend",
+      "importance": "high",
+      "description": "Main React component for displaying projects. Uses Zustand store for state management and custom hooks for data fetching."
+    },
+    {
+      "file": "web/pages/index.tsx",
+      "type": "frontend",
+      "importance": "medium",
+      "description": "Landing page and main entry point. Implements form validation and error handling."
+    },
+    {
+      "file": "api/auth.py",
+      "type": "backend",
+      "importance": "high",
+      "description": "Authentication logic including JWT token generation and validation. Handles login/logout flows."
+    }
+  ],
+  "onboarding_checklist": [
+    "Read README.md and understand project goals and features",
+    "Set up local environment: npm install, pip install -r requirements.txt",
+    "Review api/models.py to understand database schema and relationships",
+    "Check web/pages/api routes to understand frontend-backend communication",
+    "Run tests: npm test && pytest, explore test cases for examples"
+  ],
+  "estimated_effort": {
+    "frontend": "medium",
+    "backend": "medium",
+    "overall": "medium"
+  },
+  "architecture_notes": "Well-structured full-stack application with clear separation of concerns. Uses Next.js API routes as middleware between React frontend and Python Flask backend. Type-safe implementation with TypeScript throughout frontend. Good candidate for containerized deployment.",
+  "improvement_areas": [
+    "Add integration tests for API endpoints",
+    "Implement proper error boundary in React components",
+    "Add API rate limiting and request validation",
+    "Set up database migrations framework",
+    "Add comprehensive logging and monitoring"
+  ],
+  "deployment_recommendation": "Containerize frontend with Vercel, backend on Docker/Cloud Run or similar. Consider using environment-specific configurations for dev/staging/prod.",
+  "security_considerations": [
+    "Validate all API inputs on backend",
+    "Use HTTPS in production",
+    "Implement CORS properly for frontend-backend communication",
+    "Store secrets in environment variables",
+    "Regular dependency updates and security audits"
+  ]
+}
