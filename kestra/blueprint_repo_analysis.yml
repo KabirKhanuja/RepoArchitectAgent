@@ -1,33 +1,330 @@
 id: repo_architect_agent
 namespace: repoarchitectagent
+description: >
+  Complete repository analysis pipeline for RepoArchitectAgent.
+  Analyzes GitHub repos, generates architecture diagrams, CI pipelines, and opens PRs.
 
+# Define inputs
 inputs:
   - name: repo_url
     type: STRING
+    description: GitHub repository URL (e.g., https://github.com/owner/repo)
+    required: true
+    
+  - name: github_token
+    type: STRING
+    description: GitHub personal access token (for PR creation)
+    required: false
+    
+  - name: run_timestamp
+    type: STRING
+    description: Timestamp for run artifacts
+    required: false
+    default: "{{ now | date('yyyyMMdd-HHmmss') }}"
+
+# Define variables
+variables:
+  run_dir: "runs/{{ inputs.run_timestamp }}"
+  api_dir: "./api"
 
 tasks:
-  - id: clone
+  # ============================================================================
+  # STEP 1: Clone Repository
+  # ============================================================================
+  - id: clone_repo
     type: io.kestra.plugin.git.Clone
-    inputs:
-      url: "{{ inputs.repo_url }}"
-      branch: main
-
-  - id: analyze
+    description: Perform shallow clone of the target repository
+    url: "{{ inputs.repo_url }}"
+    branch: main
+    depth: 1
+    timeout: 5m
+    
+  # ============================================================================
+  # STEP 2: Analyze Repository Structure
+  # ============================================================================
+  - id: analyze_repo
     type: io.kestra.plugin.scripts.python.Script
-    containerImage: python:3.11
+    description: Analyze repository languages, frameworks, dependencies, APIs
+    dependsOn:
+      - clone_repo
+    containerImage: python:3.11-slim
     beforeCommands:
-      - pip install -r requirements.txt || true
+      - mkdir -p {{ variables.run_dir }}
+      - cd kestra
     script: |
-      python api/analyze_repo.py --repo . --out runs/$(date +%Y%m%d%H%M%S)/repo_shape.json
+      import subprocess
+      import os
+      
+      print("[*] Starting repository analysis...")
+      
+      # Run analysis
+      result = subprocess.run([
+        'python',
+        '{{ variables.api_dir }}/analyze_repo.py',
+        '{{ inputs.repo_url }}',
+        '{{ variables.run_dir }}'
+      ], capture_output=True, text=True)
+      
+      print(result.stdout)
+      if result.stderr:
+        print("STDERR:", result.stderr)
+      
+      if result.returncode != 0:
+        raise Exception(f"Analysis failed: {result.stderr}")
+      
+      print("[+] Repository analysis complete")
+    
+    outputFiles:
+      - "{{ variables.run_dir }}/repo_shape.json"
+    
+    # Expose outputs
+    env:
+      KESTRA_OUTPUT_FILE: "{{ variables.run_dir }}/repo_shape.json"
 
+  # ============================================================================
+  # STEP 3: Generate Mermaid Architecture Diagram
+  # ============================================================================
   - id: generate_diagram
     type: io.kestra.plugin.scripts.node.Script
-    containerImage: node:18
+    description: Convert repo_shape.json into a Mermaid diagram
+    dependsOn:
+      - analyze_repo
+    containerImage: node:18-alpine
+    beforeCommands:
+      - cd kestra
     script: |
-      node api/generate_mermaid.js runs/$(date +%Y%m%d%H%M%S)/repo_shape.json runs/$(date +%Y%m%d%H%M%S)/diagram.mmd
+      const fs = require('fs');
+      const path = require('path');
+      
+      console.log('[*] Generating Mermaid diagram...');
+      
+      try {
+        const result = require('child_process').execSync(
+          `node {{ variables.api_dir }}/generate_mermaid.js {{ variables.run_dir }}/repo_shape.json {{ variables.run_dir }}`,
+          { encoding: 'utf-8' }
+        );
+        console.log(result);
+        console.log('[+] Mermaid diagram generated successfully');
+      } catch (error) {
+        console.error('[!] Diagram generation warning:', error.message);
+        // Don't fail if diagram generation has issues
+      }
+    
+    outputFiles:
+      - "{{ variables.run_dir }}/diagram.mmd"
 
+  # ============================================================================
+  # STEP 4: Generate GitHub Actions CI Pipeline
+  # ============================================================================
   - id: generate_ci
     type: io.kestra.plugin.scripts.node.Script
-    containerImage: node:18
+    description: Generate optimized GitHub Actions CI YAML based on repo type
+    dependsOn:
+      - analyze_repo
+    containerImage: node:18-alpine
+    beforeCommands:
+      - cd kestra
     script: |
-      node api/generate_ci.js runs/$(date +%Y%m%d%H%M%S)/repo_shape.json runs/$(date +%Y%m%d%H%M%S)/generated-ci.yml
+      const fs = require('fs');
+      const path = require('path');
+      
+      console.log('[*] Generating CI pipeline...');
+      
+      try {
+        const result = require('child_process').execSync(
+          `node {{ variables.api_dir }}/generate_ci.js {{ variables.run_dir }}/repo_shape.json {{ variables.run_dir }}`,
+          { encoding: 'utf-8' }
+        );
+        console.log(result);
+        console.log('[+] CI pipeline generated successfully');
+      } catch (error) {
+        console.error('[!] CI generation failed:', error.message);
+        throw error;
+      }
+    
+    outputFiles:
+      - "{{ variables.run_dir }}/ci-generated.yml"
+
+  # ============================================================================
+  # STEP 5: Generate LLM Summary (Optional - requires API keys)
+  # ============================================================================
+  - id: generate_summary
+    type: io.kestra.plugin.scripts.node.Script
+    description: Generate AI-powered summary of repository (Oumi or OpenAI fallback)
+    dependsOn:
+      - analyze_repo
+    containerImage: node:18-alpine
+    timeout: 2m
+    allowFailure: true  # Don't fail the pipeline if summary generation fails
+    beforeCommands:
+      - cd kestra
+    script: |
+      const fs = require('fs');
+      const path = require('path');
+      
+      console.log('[*] Generating AI summary...');
+      
+      // Load repo shape
+      const repoShapeFile = '{{ variables.run_dir }}/repo_shape.json';
+      if (!fs.existsSync(repoShapeFile)) {
+        console.log('[!] repo_shape.json not found, skipping summary');
+        process.exit(0);
+      }
+      
+      const repoShape = JSON.parse(fs.readFileSync(repoShapeFile, 'utf-8'));
+      
+      // Check for API keys
+      const oumiKey = process.env.OUMI_API_KEY;
+      const openaiKey = process.env.OPENAI_API_KEY;
+      
+      if (!oumiKey && !openaiKey) {
+        console.log('[!] No API keys found (OUMI_API_KEY or OPENAI_API_KEY)');
+        console.log('[*] Skipping LLM summary generation');
+        process.exit(0);
+      }
+      
+      console.log('[*] LLM summary generation would proceed here');
+      console.log('    (Implementation in next step)');
+
+  # ============================================================================
+  # STEP 6: Open Pull Request
+  # ============================================================================
+  - id: open_pr
+    type: io.kestra.plugin.scripts.node.Script
+    description: Create branch, commit CI YAML, and open PR
+    dependsOn:
+      - generate_ci
+    containerImage: node:18-alpine
+    timeout: 2m
+    allowFailure: true  # Don't fail if PR creation fails (might need manual setup)
+    beforeCommands:
+      - cd kestra
+      - export GITHUB_TOKEN={{ inputs.github_token }}
+    script: |
+      const fs = require('fs');
+      const path = require('path');
+      const { execSync } = require('child_process');
+      
+      console.log('[*] Preparing PR creation...');
+      
+      // Check if gh CLI is available
+      try {
+        execSync('which gh', { stdio: 'ignore' });
+        console.log('[+] GitHub CLI available');
+      } catch {
+        console.log('[!] GitHub CLI not available in Kestra container');
+        console.log('[*] PR creation requires gh CLI or GITHUB_TOKEN');
+        process.exit(0);
+      }
+      
+      console.log('[*] Would execute: node {{ variables.api_dir }}/open_pr.js');
+      console.log('    (Run locally with proper Git and GitHub credentials)');
+
+  # ============================================================================
+  # STEP 7: Archive Results
+  # ============================================================================
+  - id: archive_results
+    type: io.kestra.plugin.core.tasks.io.ArchiveFileTask
+    description: Create archive of all generated artifacts
+    dependsOn:
+      - generate_diagram
+      - generate_ci
+      - generate_summary
+    files:
+      "{{ variables.run_dir }}/repo_shape.json": repo_shape.json
+      "{{ variables.run_dir }}/diagram.mmd": diagram.mmd
+      "{{ variables.run_dir }}/ci-generated.yml": ci-generated.yml
+    archivePath: "{{ variables.run_dir }}/artifacts.tar.gz"
+
+  # ============================================================================
+  # STEP 8: Generate Report
+  # ============================================================================
+  - id: generate_report
+    type: io.kestra.plugin.scripts.bash.Script
+    description: Create summary report of the analysis run
+    dependsOn:
+      - archive_results
+    script: |
+      #!/bin/bash
+      
+      echo "=== RepoArchitectAgent Analysis Report ==="
+      echo "Repository: {{ inputs.repo_url }}"
+      echo "Timestamp: {{ inputs.run_timestamp }}"
+      echo "Output Directory: {{ variables.run_dir }}"
+      echo ""
+      echo "=== Generated Artifacts ==="
+      
+      if [ -f "{{ variables.run_dir }}/repo_shape.json" ]; then
+        echo "✓ repo_shape.json - Repository structure analysis"
+      fi
+      
+      if [ -f "{{ variables.run_dir }}/diagram.mmd" ]; then
+        echo "✓ diagram.mmd - Architecture diagram"
+      fi
+      
+      if [ -f "{{ variables.run_dir }}/ci-generated.yml" ]; then
+        echo "✓ ci-generated.yml - GitHub Actions pipeline"
+      fi
+      
+      if [ -f "{{ variables.run_dir }}/artifacts.tar.gz" ]; then
+        echo "✓ artifacts.tar.gz - Archive of all artifacts"
+      fi
+      
+      echo ""
+      echo "=== Next Steps ==="
+      echo "1. Review generated artifacts in {{ variables.run_dir }}/"
+      echo "2. Download or view the Mermaid diagram"
+      echo "3. Customize the CI pipeline if needed"
+      echo "4. Open a PR with the generated CI YAML"
+      echo ""
+      echo "=== Local Execution ==="
+      echo "To run the PR creation locally with proper GitHub credentials:"
+      echo "  cd kestra"
+      echo "  GITHUB_TOKEN=<your-token> node ../api/open_pr.js {{ inputs.repo_url }} {{ variables.run_dir }}/ci-generated.yml"
+      echo ""
+      
+      echo "Analysis complete!"
+
+# ============================================================================
+# Execution Configuration
+# ============================================================================
+execution:
+  timeout: 30m
+
+# ============================================================================
+# Triggers (optional - for automated execution)
+# ============================================================================
+# Uncomment to trigger on schedule or webhook
+#
+# triggers:
+#   - id: schedule
+#     type: io.kestra.plugin.core.trigger.Schedule
+#     cron: "0 0 * * *"  # Daily at midnight
+#
+#   - id: webhook
+#     type: io.kestra.plugin.core.trigger.Webhook
+
+# ============================================================================
+# Outputs
+# ============================================================================
+outputs:
+  - id: repo_shape
+    type: JSON
+    value: "{{ variables.run_dir }}/repo_shape.json"
+    description: Parsed repository shape/structure
+    
+  - id: diagram_url
+    type: STRING
+    value: "{{ variables.run_dir }}/diagram.mmd"
+    description: Path to Mermaid diagram file
+    
+  - id: ci_yaml_path
+    type: STRING
+    value: "{{ variables.run_dir }}/ci-generated.yml"
+    description: Path to generated CI YAML file
+    
+  - id: artifacts_archive
+    type: STRING
+    value: "{{ variables.run_dir }}/artifacts.tar.gz"
+    description: Archive of all generated artifacts
+

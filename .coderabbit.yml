@@ -1,5 +1,239 @@
+# CodeRabbit Configuration
+# Reference: https://docs.coderabbit.ai/
+#
+# This configuration enables AI-powered code review on pull requests.
+# CodeRabbit will automatically review PRs and suggest improvements.
+
 version: 1
+
+# Enabled by default
+enabled: true
+
+# Enable specific review modes
+reviews:
+  # Automatically review on push to branches matching the pattern
+  auto_review: true
+  
+  # Review pull requests
+  pull_request: true
+  
+  # Review drafts as well
+  draft_review: false
+  
+  # Max files to review per PR (performance optimization)
+  max_files_to_review: 50
+
+# Code style and quality checks
+checks:
+  # Enable complexity analysis
+  complexity: true
+  
+  # Enable duplication detection
+  duplication: true
+  
+  # Enable security checks
+  security: true
+  
+  # Enable performance checks
+  performance: true
+  
+  # Enable maintainability checks
+  maintainability: true
+
+# Language-specific rules
 rules:
+  # Rule 1: No console.log in production code
   - name: no-console-in-prod
     description: Avoid console logs in production code.
-    files: ["web/**"]
+    files: ["web/**", "api/**"]
+    patterns:
+      - "console\\.(log|warn|error)"
+    severity: "medium"
+
+  # Rule 2: No hardcoded credentials
+  - name: no-hardcoded-credentials
+    description: Do not commit hardcoded API keys or passwords.
+    patterns:
+      - "(password|api_key|secret|token)\\s*[=:]\\s*['\"][^'\"]+['\"]"
+    severity: "critical"
+
+  # Rule 3: Require error handling
+  - name: require-error-handling
+    description: Async functions should have try-catch or error handlers.
+    files: ["**/*.js", "**/*.ts", "**/*.py"]
+    severity: "high"
+
+  # Rule 4: Check for TODO comments
+  - name: check-todos
+    description: Flag TODO and FIXME comments for review.
+    patterns:
+      - "(TODO|FIXME|HACK|XXX)\\s*:"
+    severity: "low"
+
+  # Rule 5: Enforce documentation
+  - name: require-docstrings
+    description: Functions should have docstrings or JSDoc comments.
+    files: ["api/**/*.py", "api/**/*.js", "api/**/*.ts"]
+    severity: "medium"
+
+  # Rule 6: No duplicate code
+  - name: no-duplicate-code
+    description: Check for code duplication.
+    severity: "medium"
+
+  # Rule 7: Performance checks
+  - name: performance-improvements
+    description: Suggest performance optimizations.
+    files: ["**/*.js", "**/*.ts", "**/*.py"]
+    severity: "medium"
+
+  # Rule 8: Security checks
+  - name: security-vulnerabilities
+    description: Check for common security vulnerabilities.
+    files: ["**/*.js", "**/*.ts", "**/*.py"]
+    severity: "critical"
+
+# Skip patterns (files/directories to not review)
+skip_patterns:
+  - "node_modules/"
+  - "dist/"
+  - "build/"
+  - ".next/"
+  - "venv/"
+  - "__pycache__/"
+  - ".git/"
+  - "*.min.js"
+  - "*.min.css"
+  - "coverage/"
+  - "**/*.test.js"
+  - "**/*.test.ts"
+  - "**/*.spec.js"
+  - "**/*.spec.ts"
+  - "package-lock.json"
+  - "yarn.lock"
+
+# PR comment configuration
+comments:
+  # Post summary comment on PR
+  enabled: true
+  
+  # Include detailed suggestions
+  include_suggestions: true
+  
+  # Group comments by file
+  group_by_file: true
+  
+  # Include severity indicator
+  include_severity: true
+  
+  # Collapse detailed comments by default
+  collapse_details: false
+
+# Rules to enforce on PRs
+enforcement:
+  # Require tests for new code
+  require_tests:
+    enabled: false
+    threshold: 0.7  # At least 70% of new code should have tests
+  
+  # Enforce code coverage
+  code_coverage:
+    enabled: false
+    threshold: 80  # Require 80% code coverage
+  
+  # Require documentation
+  documentation:
+    enabled: true
+    threshold: 0.5  # At least 50% of functions should be documented
+  
+  # Limit code duplication
+  duplication:
+    enabled: true
+    threshold: 0.1  # Warn if more than 10% duplication
+    
+  # Security check requirement
+  security_check:
+    enabled: true
+    fail_on_critical: true
+
+# AI Review settings
+ai_review:
+  # Enable AI-powered review
+  enabled: true
+  
+  # Focus areas for review
+  focus_areas:
+    - "logic_errors"
+    - "performance_issues"
+    - "security_vulnerabilities"
+    - "code_maintainability"
+    - "best_practices"
+    - "test_coverage"
+  
+  # Ignore suggestions from these categories
+  ignore_categories: []
+  
+  # Require specific improvements
+  suggestions_required:
+    - "security_fix"
+    - "critical_bug"
+
+# Notification settings
+notifications:
+  # Notify on new issues
+  enabled: true
+  
+  # Notify when review is complete
+  on_review_complete: true
+  
+  # Comment with suggestions
+  comment_suggestions: true
+
+# Integration settings
+integrations:
+  # GitHub integration settings
+  github:
+    enabled: true
+    # Post review as PR comment
+    post_comment: true
+    # Request review from CodeRabbit
+    request_review: false
+    # Auto-assign to specific users
+    auto_assign: []
+
+  # Slack integration (if configured)
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+
+# Severity levels and actions
+severity_actions:
+  critical:
+    action: "request_review"
+    message: "Critical issues found. Please review carefully."
+  
+  high:
+    action: "comment"
+    message: "High priority suggestions below."
+  
+  medium:
+    action: "comment"
+    message: "Medium priority improvements suggested."
+  
+  low:
+    action: "comment"
+    message: "Low priority suggestions for consideration."
+
+# Custom prompt for AI review
+custom_prompt: |
+  Please review this pull request with focus on:
+  
+  1. **Security**: Check for vulnerabilities, hardcoded secrets, unsafe dependencies
+  2. **Performance**: Identify inefficiencies, memory leaks, N+1 queries
+  3. **Maintainability**: Check code clarity, naming, duplication, complexity
+  4. **Best Practices**: Ensure alignment with project standards and frameworks used
+  5. **Testing**: Verify adequate test coverage for new/changed code
+  6. **Documentation**: Ensure functions and complex logic are documented
+  
+  Generated by RepoArchitectAgent - provide specific, actionable suggestions.
+
