@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /**
  * Generate AI-powered repository summary
- * Tries Oumi API first, falls back to OpenAI
+ * Uses Groq API with correct endpoints and models
  * Usage: node generate_summary.js <repo_shape.json> [output_dir]
  */
+
+require('dotenv').config({ path: 'web/.env.local' });
 
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const OUMI_API_KEY = process.env.OUMI_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OUMI_API_URL = 'https://api.oumi.ai/v1/chat/completions';
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+// FIXED: Correct Groq API URL
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /**
  * Make HTTPS request
@@ -55,94 +56,49 @@ function makeHttpsRequest(url, options, data) {
   });
 }
 
-/**
- * Call Oumi API
- */
-async function callOumiAPI(systemPrompt, userPrompt) {
-  if (!OUMI_API_KEY) {
-    console.log('[!] OUMI_API_KEY not set, skipping Oumi');
+// Call Groq API
+async function callGroqAPI(systemPrompt, userPrompt) {
+  if (!GROQ_API_KEY) {
+    console.log('[!] GROQ_API_KEY not set, skipping Groq');
     return null;
   }
 
   try {
-    console.log('[*] Calling Oumi API...');
+    console.log('[*] Calling Groq API...');
 
     const payload = JSON.stringify({
-      model: 'oumi-1',
+      // FIXED: Use a valid production model
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.7,
-      max_tokens: 1000,
+      // FIXED: Use max_completion_tokens instead of max_tokens
+      max_completion_tokens: 1000,
     });
 
-    const response = await makeHttpsRequest(OUMI_API_URL, {
+    const response = await makeHttpsRequest(GROQ_API_URL, {
       headers: {
-        'Authorization': `Bearer ${OUMI_API_KEY}`,
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
       },
     }, payload);
 
     if (response.status === 200 && response.data.choices && response.data.choices[0]) {
       const content = response.data.choices[0].message.content;
-      console.log('[+] Oumi API response received');
+      console.log('[+] Groq API response received');
       return {
-        provider: 'oumi',
+        provider: 'groq',
         content,
         usage: response.data.usage,
       };
     } else {
-      console.log(`[!] Oumi API error: ${response.status}`);
+      console.log(`[!] Groq API error: ${response.status}`);
+      console.log(`[!] Response: ${JSON.stringify(response.data)}`);
       return null;
     }
   } catch (error) {
-    console.log(`[!] Oumi API failed: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Call OpenAI API (fallback)
- */
-async function callOpenAIAPI(systemPrompt, userPrompt) {
-  if (!OPENAI_API_KEY) {
-    console.log('[!] OPENAI_API_KEY not set, skipping OpenAI');
-    return null;
-  }
-
-  try {
-    console.log('[*] Calling OpenAI API (fallback)...');
-
-    const payload = JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-
-    const response = await makeHttpsRequest(OPENAI_API_URL, {
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-    }, payload);
-
-    if (response.status === 200 && response.data.choices && response.data.choices[0]) {
-      const content = response.data.choices[0].message.content;
-      console.log('[+] OpenAI API response received');
-      return {
-        provider: 'openai',
-        content,
-        usage: response.data.usage,
-      };
-    } else {
-      console.log(`[!] OpenAI API error: ${response.status}`);
-      return null;
-    }
-  } catch (error) {
-    console.log(`[!] OpenAI API failed: ${error.message}`);
+    console.log(`[!] Groq API failed: ${error.message}`);
     return null;
   }
 }
@@ -279,8 +235,12 @@ async function main() {
     console.error('  node generate_summary.js runs/latest/repo_shape.json runs/latest');
     console.error('');
     console.error('Environment Variables:');
-    console.error('  OUMI_API_KEY - Oumi API key (primary)');
-    console.error('  OPENAI_API_KEY - OpenAI API key (fallback)');
+    console.error('  GROQ_API_KEY - Groq API key (required)');
+    console.error('');
+    console.error('Available Groq Models:');
+    console.error('  - llama-3.3-70b-versatile (recommended, best quality)');
+    console.error('  - llama-3.1-8b-instant (faster, lower quality)');
+    console.error('  - gemma2-9b-it');
     process.exit(1);
   }
 
@@ -300,13 +260,13 @@ async function main() {
     console.log(`[*] Loaded ${inputPath}`);
 
     // Check for API keys
-    if (!OUMI_API_KEY && !OPENAI_API_KEY) {
-      console.log('[!] No API keys found (OUMI_API_KEY or OPENAI_API_KEY)');
+    if (!GROQ_API_KEY) {
+      console.log('[!] No API key found (GROQ_API_KEY)');
       console.log('[*] Skipping summary generation');
       console.log('');
-      console.log('To enable LLM summaries, set one of:');
-      console.log('  export OUMI_API_KEY=oumi_sk_xxxxx');
-      console.log('  export OPENAI_API_KEY=sk-proj-xxxxx');
+      console.log('To enable LLM summaries:');
+      console.log('  1. Get an API key from https://console.groq.com/keys');
+      console.log('  2. Add to web/.env.local: GROQ_API_KEY=gsk_xxxxx');
       process.exit(0);
     }
 
@@ -316,14 +276,10 @@ async function main() {
 
     console.log('[*] Generated prompts');
 
-    // Try Oumi first, fallback to OpenAI
-    let result = await callOumiAPI(systemPrompt, userPrompt);
-    if (!result) {
-      result = await callOpenAIAPI(systemPrompt, userPrompt);
-    }
+    let result = await callGroqAPI(systemPrompt, userPrompt);
 
     if (!result) {
-      throw new Error('All LLM APIs failed');
+      throw new Error('Groq API failed');
     }
 
     // Parse response
@@ -334,6 +290,7 @@ async function main() {
       timestamp: new Date().toISOString(),
       repository: repoShape.url,
       provider: result.provider,
+      model: 'llama-3.3-70b-versatile',
       summary: parsed.summary,
       hotspots: parsed.hotspots,
       onboarding: parsed.onboarding,
@@ -355,6 +312,7 @@ async function main() {
 
 Generated on: ${new Date().toISOString()}
 Provider: ${result.provider}
+Model: llama-3.3-70b-versatile
 
 ## System Prompt
 
@@ -388,6 +346,7 @@ ${parsed.onboarding.map((o) => `- [ ] ${o}`).join('\n')}
 ---
 
 **Provider:** ${result.provider}
+**Model:** llama-3.3-70b-versatile
 **Timestamp:** ${new Date().toISOString()}
 `;
 
@@ -408,8 +367,7 @@ ${parsed.onboarding.map((o) => `- [ ] ${o}`).join('\n')}
 
 // Export for testing
 module.exports = {
-  callOumiAPI,
-  callOpenAIAPI,
+  callGroqAPI,
   generateSystemPrompt,
   generateUserPrompt,
   parseSummaryResponse,
