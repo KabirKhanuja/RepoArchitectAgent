@@ -38,15 +38,26 @@ export default async function handler(
 
     // Run Python analysis
     console.log(`Executing: python ${pythonScript} "${repoUrl}" ${runsDir}`);
-    const { stdout, stderr } = await execAsync(
-      `python "${pythonScript}" "${repoUrl}" "${runsDir}"`,
-      { timeout: 60000 }
-    );
+    try {
+      const { stdout, stderr } = await execAsync(
+        `python "${pythonScript}" "${repoUrl}" "${runsDir}"`,
+        { timeout: 60000 }
+      );
 
-    if (stderr) {
-      console.error('Python stderr:', stderr);
+      if (stderr) {
+        console.error('Python stderr:', stderr);
+      }
+      console.log('Python stdout:', stdout);
+    } catch (execError: any) {
+      // Python script may exit with code 1 even on success due to cleanup issues
+      // Check if the output file was created; if so, continue
+      const shapeFile = path.join(runsDir, 'repo_shape.json');
+      if (!fs.existsSync(shapeFile)) {
+        console.error('Python execution error:', execError.message);
+        throw execError;
+      }
+      console.warn('Python exited with error but repo_shape.json was created; continuing...');
     }
-    console.log('Python stdout:', stdout);
 
     // Read the generated repo_shape.json
     const shapeFile = path.join(runsDir, 'repo_shape.json');
