@@ -3,16 +3,15 @@ import shutil
 import tempfile
 from typing import Dict, Any
 
-from ingestion.clone_repo import clone_repository
-from analysis.detect_stack import detect_stack
-from analysis.parse_structure import parse_structure
-from analysis.dependencies import extract_dependencies
-from analysis.risks import detect_risks
-from ir.builder import build_ir
-
-from llm.summarize import generate_overview
-from llm.generate_mermaid import generate_architecture
-from llm.generate_ci import generate_recommendations
+from api.ingestion.clone_repo import clone_repository
+from api.analysis.detect_stack import detect_stack
+from api.analysis.parse_structure import parse_structure
+from api.analysis.dependencies import extract_dependencies
+from api.analysis.risks import detect_risks
+from api.ir.builder import build_ir
+from api.llm.summarize import generate_overview
+from api.llm.generate_mermaid import generate_architecture
+from api.llm.generate_ci import generate_recommendations
 
 
 def analyze_repository(repository_url: str) -> Dict[str, Any]:

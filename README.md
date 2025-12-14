@@ -2,6 +2,12 @@
 
 > Analyze a code repository, generate Mermaid architecture diagrams, and propose CI configs + PRs.
 
+## to run
+
+from root : 
+``` uvicorn api.index:app --reload ```
+
+
 ## Structure
 
 ```

@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, Any, Dict
 
-from orchestration.analyze_repo import analyze_repository
-
+from api.orchestration.analyze_repo import analyze_repository
 
 # FastAPI App
 app = FastAPI(
