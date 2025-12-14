@@ -1,32 +1,79 @@
-#!/usr/bin/env python3
-import argparse
-import json
 import os
-from pathlib import Path
+import shutil
+import tempfile
+from typing import Dict, Any
 
-def analyze_repo(repo_path: str) -> dict:
-    structure = []
-    for root, dirs, files in os.walk(repo_path):
-        # skip node_modules and .git
-        parts = Path(root).parts
-        if any(p in {"node_modules", ".git"} for p in parts):
-            continue
-        for f in files:
-            structure.append(str(Path(root) / f))
-    return {"files": structure}
+from ingestion.clone_repo import clone_repository
+from analysis.detect_stack import detect_stack
+from analysis.parse_structure import parse_structure
+from analysis.dependencies import extract_dependencies
+from analysis.risks import detect_risks
+from ir.builder import build_ir
 
-def main():
-    parser = argparse.ArgumentParser(description="Analyze repository structure")
-    parser.add_argument("--repo", default=".", help="Path to repo root")
-    parser.add_argument("--out", required=True, help="Output JSON path")
-    args = parser.parse_args()
+from llm.summarize import generate_overview
+from llm.generate_mermaid import generate_architecture
+from llm.generate_ci import generate_recommendations
 
-    data = analyze_repo(args.repo)
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"Wrote {out_path}")
 
-if __name__ == "__main__":
-    main()
+def analyze_repository(repository_url: str) -> Dict[str, Any]:
+    """
+    Orchestrates the full repository analysis pipeline.
+    Returns a dict that matches AnalysisResponse expected by frontend.
+    """
+
+    # --------------------
+    # 1. Create temp workspace
+    # --------------------
+    workspace = tempfile.mkdtemp(prefix="repoarchitect_")
+
+    try:
+        # --------------------
+        # 2. Clone repository
+        # --------------------
+        repo_path = clone_repository(repository_url, workspace)
+
+        # --------------------
+        # 3. Deterministic analysis (NO LLM)
+        # --------------------
+        stack_info = detect_stack(repo_path)
+        structure_info = parse_structure(repo_path)
+        dependency_info = extract_dependencies(repo_path)
+        risk_info = detect_risks(repo_path)
+
+        # --------------------
+        # 4. Build Intermediate Representation (IR)
+        # --------------------
+        ir = build_ir(
+            repository_url=repository_url,
+            repo_path=repo_path,
+            stack=stack_info,
+            structure=structure_info,
+            dependencies=dependency_info,
+            risks=risk_info,
+        )
+
+        # --------------------
+        # 5. LLM-powered reasoning
+        # --------------------
+        overview = generate_overview(ir)
+        architecture = generate_architecture(ir)
+        recommendations = generate_recommendations(ir)
+
+        # --------------------
+        # 6. Assemble final response (AnalysisResponse)
+        # --------------------
+        response: Dict[str, Any] = {
+            "overview": overview,
+            "architecture": architecture,
+            "modules": ir.get("modules"),
+            "dependencies": ir.get("dependencies"),
+            "recommendations": recommendations,
+        }
+
+        return response
+
+    finally:
+        # --------------------
+        # 7. Cleanup temp files
+        # --------------------
+        shutil.rmtree(workspace, ignore_errors=True)
