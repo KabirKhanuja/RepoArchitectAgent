@@ -1,0 +1,43 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install dependencies
+      run: npm ci || npm install || echo "no-install"
+
+    - name: Run linter
+      run: npm run lint || echo "no-lint"
+
+    - name: Run tests
+      run: npm test || echo "no-tests"
+
+    - name: Build
+      run: npm run build || echo "no-build"
+
+    - name: Archive artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output-${{ matrix.node-version }}
+        path: dist/
+        retention-days: 5

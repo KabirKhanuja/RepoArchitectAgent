@@ -1,12 +1,13 @@
 "use client"
 
 import type React from "react"
-
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { FileCode, GitBranch, Package, Lightbulb, AlertTriangle, CheckCircle2, Info } from "lucide-react"
+import { FileCode, GitBranch, Package, Lightbulb, AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw } from "lucide-react"
 import type { AnalysisResponse } from "@/lib/types"
 import MermaidViewer from "./MermaidViewer"
 
@@ -14,7 +15,156 @@ interface AnalysisResultsProps {
   data: AnalysisResponse
 }
 
+interface DirectoryDescription {
+  directory: string
+  description: string
+}
+
+// Get API URL from environment or default to localhost
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
 export function AnalysisResults({ data }: AnalysisResultsProps) {
+  // State for AI-generated description
+  const [aiDescription, setAiDescription] = useState<string>(data.overview?.description || "")
+  const [aiKeyFeatures, setAiKeyFeatures] = useState<string[]>(data.overview?.key_features || [])
+  const [descriptionLoading, setDescriptionLoading] = useState<boolean>(false)
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
+
+  // State for Mermaid diagram
+  const [mermaidDiagram, setMermaidDiagram] = useState<string>(data.visualization?.mermaid || "")
+  const [mermaidLoading, setMermaidLoading] = useState<boolean>(false)
+  const [mermaidError, setMermaidError] = useState<string | null>(null)
+
+  // Fetch AI description on component mount if needed
+  useEffect(() => {
+    if (!data.overview?.description || data.overview.description.includes("unknown architecture")) {
+      fetchAIDescription()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fetch Mermaid diagram on component mount if needed
+  useEffect(() => {
+    if (!data.visualization?.mermaid) {
+      fetchMermaidDiagram()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const fetchAIDescription = async () => {
+    try {
+      setDescriptionLoading(true)
+      setDescriptionError(null)
+
+      const response = await fetch(`${API_URL}/api/generate-description`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repository_name: data.overview?.repository_name || "Unknown",
+          primary_languages: data.overview?.primary_languages || [],
+          total_files: data.overview?.total_files || 0,
+          folder_structure: data.architecture?.folder_structure || null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate description: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      
+      // Handle new API response structure
+      if (result.description) {
+        setAiDescription(result.description)
+      }
+      
+      // Handle key_features array from backend
+      if (result.key_features && Array.isArray(result.key_features)) {
+        setAiKeyFeatures(result.key_features)
+      }
+    } catch (err) {
+      console.error("Description generation error:", err)
+      setDescriptionError(err instanceof Error ? err.message : "Unknown error")
+      setAiDescription(data.overview?.description || "Unable to generate description")
+    } finally {
+      setDescriptionLoading(false)
+    }
+  }
+
+  const fetchMermaidDiagram = async () => {
+    try {
+      setMermaidLoading(true)
+      setMermaidError(null)
+
+      const response = await fetch(`${API_URL}/api/generate-mermaid`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          folder_structure: data.architecture?.folder_structure || {},
+          repository_name: data.overview?.repository_name || "Repository",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate Mermaid diagram: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      
+      // Validate that we got a valid diagram
+      if (result.mermaid && result.mermaid.includes("graph")) {
+        setMermaidDiagram(result.mermaid)
+      } else {
+        throw new Error("Invalid Mermaid diagram received")
+      }
+    } catch (err) {
+      console.error("Mermaid generation error:", err)
+      setMermaidError(err instanceof Error ? err.message : "Unknown error")
+      
+      // Set a simple fallback diagram
+      setMermaidDiagram(`graph TD
+    A["${data.overview?.repository_name || "Repository"}"]
+    A --> B["api/"]
+    A --> C["web/"]
+    B --> D("index.py")
+    C --> E["components/"]
+    C --> F["pages/"]`)
+    } finally {
+      setMermaidLoading(false)
+    }
+  }
+
+  // Function to generate directory descriptions using Groq API
+  const generateDirectoryDescriptions = async (directories: string[]): Promise<DirectoryDescription[]> => {
+    try {
+      const response = await fetch(`${API_URL}/api/generate-directory-descriptions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          directories: directories,
+          repository_name: data.overview?.repository_name || "Repository",
+          folder_structure: data.architecture?.folder_structure || null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate directory descriptions: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      return result.descriptions || []
+    } catch (err) {
+      console.error("Directory description generation error:", err)
+      return []
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
@@ -79,18 +229,44 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
                 </div>
               )}
 
-              {data.overview?.description && (
-                <div>
-                  <h3 className="mb-2 text-sm font-medium text-muted-foreground">Description</h3>
-                  <p className="text-sm leading-relaxed">{data.overview.description}</p>
+              {/* AI-Generated Description Section */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-muted-foreground">Description</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchAIDescription}
+                    disabled={descriptionLoading}
+                    className="h-7 gap-2 px-2"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${descriptionLoading ? "animate-spin" : ""}`} />
+                    {descriptionLoading ? "Generating..." : "Regenerate"}
+                  </Button>
                 </div>
-              )}
+                
+                {descriptionLoading ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Generating AI-powered description with Groq...
+                    </span>
+                  </div>
+                ) : descriptionError ? (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                    <p className="text-sm text-destructive">⚠️ {descriptionError}</p>
+                  </div>
+                ) : null}
+                
+                <p className="text-sm leading-relaxed mt-2">{aiDescription}</p>
+              </div>
 
-              {data.overview?.key_features && data.overview.key_features.length > 0 && (
+              {/* Key Features Section - Now using AI-generated features */}
+              {aiKeyFeatures.length > 0 && (
                 <div>
                   <h3 className="mb-3 text-sm font-medium text-muted-foreground">Key Features</h3>
                   <ul className="space-y-2">
-                    {data.overview.key_features.map((feature, idx) => (
+                    {aiKeyFeatures.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                         <span className="text-sm">{feature}</span>
@@ -106,16 +282,55 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
         <TabsContent value="visualization" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Visualization</CardTitle>
-              <CardDescription>Mermaid diagram of the repository architecture</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Visualization</CardTitle>
+                  <CardDescription>Mermaid diagram of the repository architecture</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchMermaidDiagram}
+                  disabled={mermaidLoading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${mermaidLoading ? "animate-spin" : ""}`} />
+                  {mermaidLoading ? "Generating..." : "Regenerate"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {data.visualization?.mermaid ? (
+              {mermaidLoading ? (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-muted/50 p-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    Generating comprehensive Mermaid diagram with AI...
+                  </span>
+                </div>
+              ) : mermaidError ? (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
+                  <p className="text-sm text-destructive mb-4">⚠️ {mermaidError}</p>
+                  <Button onClick={fetchMermaidDiagram} size="sm">
+                    Retry
+                  </Button>
+                </div>
+              ) : mermaidDiagram ? (
                 <div className="rounded-lg border border-border/50 bg-card/50 p-4">
-                  <MermaidViewer diagram={data.visualization.mermaid} />
+                  <MermaidViewer 
+                    diagram={mermaidDiagram} 
+                    repositoryName={data.overview?.repository_name}
+                    onGenerateDescriptions={generateDirectoryDescriptions}
+                  />
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No visualization available for this analysis.</p>
+                <div className="rounded-lg bg-muted/50 p-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    No visualization available. Click to generate one.
+                  </p>
+                  <Button onClick={fetchMermaidDiagram} size="sm">
+                    Generate Diagram
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
