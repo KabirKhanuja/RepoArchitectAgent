@@ -323,7 +323,7 @@ export default function MermaidViewer({
       <div className="relative">
         <div 
           ref={containerRef} 
-          className="mermaid-container flex justify-center items-center min-h-[600px] w-full overflow-auto p-6 bg-slate-900/30 rounded-lg"
+          className="mermaid-container flex justify-center items-center min-h-150 w-full overflow-auto p-6 bg-slate-900/30 rounded-lg"
         />
         
         {/* Info Panel */}
@@ -449,7 +449,7 @@ export default function MermaidViewer({
                 className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 hover:border-blue-500/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
-                  <Folder className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <Folder className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-mono text-sm font-semibold text-white mb-2 truncate">
                       {dir.directory}

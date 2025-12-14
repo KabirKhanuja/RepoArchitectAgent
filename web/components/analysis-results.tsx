@@ -268,7 +268,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
                   <ul className="space-y-2">
                     {aiKeyFeatures.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
