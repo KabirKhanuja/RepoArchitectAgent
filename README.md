@@ -5,7 +5,13 @@
 ## to run
 
 from root : 
+
+for api : 
 ``` uvicorn api.index:app --reload ```
+
+for web : 
+``` cd web
+npm run dev ```
 
 
 ## Structure
