@@ -17,8 +17,8 @@ export default function HomePage() {
       <section className="relative overflow-hidden">
         {/* Background gradient effect */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-          <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-primary/20 blur-[100px]" />
+          <div className="absolute inset-0 bg-linear-to-b from-primary/5 via-transparent to-transparent" />
+          <div className="absolute left-1/2 top-0 h-125 w-125 -translate-x-1/2 rounded-full bg-primary/20 blur-[100px]" />
         </div>
 
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
@@ -30,7 +30,7 @@ export default function HomePage() {
 
             <h1 className="mx-auto max-w-4xl text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
               Understand Any GitHub Repository{" "}
-              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 Instantly
               </span>
             </h1>
@@ -90,7 +90,7 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="relative overflow-hidden border-t border-border/50">
         <div className="absolute inset-0 -z-10">
-          <div className="absolute bottom-0 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-primary/10 blur-[100px]" />
+          <div className="absolute bottom-0 left-1/2 h-100 w-100 -translate-x-1/2 rounded-full bg-primary/10 blur-[100px]" />
         </div>
 
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
