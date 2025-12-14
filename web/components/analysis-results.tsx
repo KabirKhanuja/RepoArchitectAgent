@@ -11,6 +11,8 @@ import { FileCode, GitBranch, Package, Lightbulb, AlertTriangle, CheckCircle2, I
 import type { AnalysisResponse } from "@/lib/types"
 import MermaidViewer from "./MermaidViewer"
 
+import { getApiUrl } from "@/lib/api"
+
 interface AnalysisResultsProps {
   data: AnalysisResponse
 }
@@ -29,7 +31,7 @@ interface Recommendation {
 }
 
 // Get API URL from environment or default to localhost
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+// const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
 export function AnalysisResults({ data }: AnalysisResultsProps) {
   // State for AI-generated description
@@ -77,7 +79,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
       setDescriptionLoading(true)
       setDescriptionError(null)
 
-      const response = await fetch(`${API_URL}/api/generate-description`, {
+      const response = await fetch(`getApiUrl(/api/generate-description)`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,7 +119,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
       setMermaidLoading(true)
       setMermaidError(null)
 
-      const response = await fetch(`${API_URL}/api/generate-mermaid`, {
+      const response = await fetch(`getApiUrl(/api/generate-mermaid)`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -160,7 +162,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
       setRecommendationsLoading(true)
       setRecommendationsError(null)
 
-      const response = await fetch(`${API_URL}/api/generate-recommendations`, {
+      const response = await fetch(`getApiUrl(/api/generate-recommendations)`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,7 +197,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
   // Function to generate directory descriptions using Groq API
   const generateDirectoryDescriptions = async (directories: string[]): Promise<DirectoryDescription[]> => {
     try {
-      const response = await fetch(`${API_URL}/api/generate-directory-descriptions`, {
+      const response = await fetch(`getApiUrl(/api/generate-directory-descriptions)`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
