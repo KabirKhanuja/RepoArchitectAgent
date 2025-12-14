@@ -45,7 +45,7 @@ def analyze(request: AnalyzeRequest):
     Accepts a public GitHub repo URL and returns analysis.
     """
     try:
-        result = analyze_repository(request.repository_url)
+        result = analyze_repository(str(request.repository_url))
         return result
 
     except ValueError as e:
@@ -58,3 +58,17 @@ def analyze(request: AnalyzeRequest):
             status_code=500,
             detail="Failed to analyze repository. Please try again later.",
         )
+    
+    '''
+
+debuggimg purposes 
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
+    
+'''
