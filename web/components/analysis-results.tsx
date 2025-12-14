@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { FileCode, GitBranch, Package, Lightbulb, AlertTriangle, CheckCircle2, Info } from "lucide-react"
 import type { AnalysisResponse } from "@/lib/types"
+import MermaidViewer from "./MermaidViewer"
 
 interface AnalysisResultsProps {
   data: AnalysisResponse
@@ -42,8 +43,9 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
 
       {/* Detailed Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="visualization">Visualization</TabsTrigger>
           <TabsTrigger value="architecture">Architecture</TabsTrigger>
           <TabsTrigger value="modules">Modules</TabsTrigger>
           <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
@@ -90,12 +92,30 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
                   <ul className="space-y-2">
                     {data.overview.key_features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="visualization" className="space-y-4">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Visualization</CardTitle>
+              <CardDescription>Mermaid diagram of the repository architecture</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data.visualization?.mermaid ? (
+                <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+                  <MermaidViewer diagram={data.visualization.mermaid} />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No visualization available for this analysis.</p>
               )}
             </CardContent>
           </Card>

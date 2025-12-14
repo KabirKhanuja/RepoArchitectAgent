@@ -18,7 +18,7 @@ def detect_risks(repo_path: str) -> Dict[str, Any]:
     # --------------------
     # README
     # --------------------
-    for name in ("README.md", "README.MD", "readme.md"):
+    for name in ("README.md", "README.MD", "readme.md", "Readme.md"):
         if os.path.exists(os.path.join(repo_path, name)):
             risks["missing_readme"] = False
             break

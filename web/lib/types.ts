@@ -30,4 +30,7 @@ export interface AnalysisResponse {
     priority?: "high" | "medium" | "low"
     impact?: string
   }>
+  visualization?: {
+    mermaid?: string
+  }
 }

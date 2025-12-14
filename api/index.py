@@ -32,6 +32,7 @@ class AnalyzeResponse(BaseModel):
 
     overview: Optional[Dict[str, Any]] = None
     architecture: Optional[Dict[str, Any]] = None
+    visualization: Optional[Dict[str, Any]] = None
     modules: Optional[Any] = None
     dependencies: Optional[Dict[str, Any]] = None
     recommendations: Optional[Any] = None
