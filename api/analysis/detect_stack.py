@@ -17,6 +17,13 @@ EXTENSION_LANGUAGE_MAP = {
     ".c": "C",
     ".cs": "C#",
     ".php": "PHP",
+    #".html": "HTML",
+    #".css": "CSS",
+    ".rb": "Ruby",  
+    ".swift": "Swift",
+    ".kt": "Kotlin",
+    ".m": "Objective-C",
+    ".sh": "Shell"
 }
 
 
