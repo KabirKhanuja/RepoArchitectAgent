@@ -4,3 +4,4 @@ uvicorn
 openai
 anthropic
 gitpython
+groq
