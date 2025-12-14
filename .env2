@@ -1,0 +1,16 @@
+# Example env file for RepoArchitectAgent (no real secrets)
+
+# LLM / model providers
+OPENAI_API_KEY=sk-your-openai-key-here
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+
+# GitHub / repo access
+GITHUB_TOKEN=ghp_your_token_here
+GITHUB_APP_ID=123456
+GITHUB_APP_PRIVATE_KEY_PATH=./github-app-private-key.pem
+
+# OUMI
+OUMI_API_KEY=
+
+# Optional: service URLs
+BACKEND_BASE_URL=http://localhost:8000
