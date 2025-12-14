@@ -20,6 +20,14 @@ interface DirectoryDescription {
   description: string
 }
 
+interface Recommendation {
+  title: string
+  description: string
+  priority: string
+  impact?: string
+  category?: string
+}
+
 // Get API URL from environment or default to localhost
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -35,6 +43,11 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
   const [mermaidLoading, setMermaidLoading] = useState<boolean>(false)
   const [mermaidError, setMermaidError] = useState<string | null>(null)
 
+  // State for AI-generated recommendations
+  const [recommendations, setRecommendations] = useState<Recommendation[]>((data.recommendations as Recommendation[]) || [])
+  const [recommendationsLoading, setRecommendationsLoading] = useState<boolean>(false)
+  const [recommendationsError, setRecommendationsError] = useState<string | null>(null)
+
   // Fetch AI description on component mount if needed
   useEffect(() => {
     if (!data.overview?.description || data.overview.description.includes("unknown architecture")) {
@@ -47,6 +60,14 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
   useEffect(() => {
     if (!data.visualization?.mermaid) {
       fetchMermaidDiagram()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fetch recommendations on component mount if needed
+  useEffect(() => {
+    if (!data.recommendations || data.recommendations.length === 0) {
+      fetchRecommendations()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -75,12 +96,10 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
 
       const result = await response.json()
       
-      // Handle new API response structure
       if (result.description) {
         setAiDescription(result.description)
       }
       
-      // Handle key_features array from backend
       if (result.key_features && Array.isArray(result.key_features)) {
         setAiKeyFeatures(result.key_features)
       }
@@ -115,7 +134,6 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
 
       const result = await response.json()
       
-      // Validate that we got a valid diagram
       if (result.mermaid && result.mermaid.includes("graph")) {
         setMermaidDiagram(result.mermaid)
       } else {
@@ -125,7 +143,6 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
       console.error("Mermaid generation error:", err)
       setMermaidError(err instanceof Error ? err.message : "Unknown error")
       
-      // Set a simple fallback diagram
       setMermaidDiagram(`graph TD
     A["${data.overview?.repository_name || "Repository"}"]
     A --> B["api/"]
@@ -135,6 +152,43 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
     C --> F["pages/"]`)
     } finally {
       setMermaidLoading(false)
+    }
+  }
+
+  const fetchRecommendations = async () => {
+    try {
+      setRecommendationsLoading(true)
+      setRecommendationsError(null)
+
+      const response = await fetch(`${API_URL}/api/generate-recommendations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repository_name: data.overview?.repository_name || "Unknown",
+          primary_languages: data.overview?.primary_languages || [],
+          total_files: data.overview?.total_files || 0,
+          folder_structure: data.architecture?.folder_structure || null,
+          dependencies: data.dependencies || null,
+          architecture_type: data.architecture?.structure_type || null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate recommendations: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      
+      if (result.recommendations && Array.isArray(result.recommendations)) {
+        setRecommendations(result.recommendations)
+      }
+    } catch (err) {
+      console.error("Recommendations generation error:", err)
+      setRecommendationsError(err instanceof Error ? err.message : "Unknown error")
+    } finally {
+      setRecommendationsLoading(false)
     }
   }
 
@@ -186,7 +240,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
         />
         <MetricCard
           title="Recommendations"
-          value={data.recommendations?.length.toString() || "0"}
+          value={recommendations.length.toString()}
           icon={<Lightbulb className="h-5 w-5" />}
         />
       </div>
@@ -261,7 +315,7 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
                 <p className="text-sm leading-relaxed mt-2">{aiDescription}</p>
               </div>
 
-              {/* Key Features Section - Now using AI-generated features */}
+              {/* Key Features Section */}
               {aiKeyFeatures.length > 0 && (
                 <div>
                   <h3 className="mb-3 text-sm font-medium text-muted-foreground">Key Features</h3>
@@ -501,13 +555,41 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
         <TabsContent value="recommendations" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>AI Recommendations</CardTitle>
-              <CardDescription>Suggested improvements and best practices</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>AI Recommendations</CardTitle>
+                  <CardDescription>Suggested improvements and best practices</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchRecommendations}
+                  disabled={recommendationsLoading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${recommendationsLoading ? "animate-spin" : ""}`} />
+                  {recommendationsLoading ? "Analyzing..." : "Regenerate"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {data.recommendations && data.recommendations.length > 0 ? (
+              {recommendationsLoading ? (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-lg bg-muted/50 p-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    Analyzing repository with GitHub API + AI...
+                  </span>
+                </div>
+              ) : recommendationsError ? (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
+                  <p className="text-sm text-destructive mb-4">⚠️ {recommendationsError}</p>
+                  <Button onClick={fetchRecommendations} size="sm">
+                    Retry
+                  </Button>
+                </div>
+              ) : recommendations && recommendations.length > 0 ? (
                 <div className="space-y-4">
-                  {data.recommendations.map((rec, idx) => (
+                  {recommendations.map((rec, idx) => (
                     <div key={idx} className="rounded-lg border-l-4 border-primary bg-card/50 p-4">
                       <div className="flex items-start gap-3">
                         <div className="mt-1">
@@ -530,6 +612,11 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
                                 {rec.priority}
                               </Badge>
                             )}
+                            {rec.category && (
+                              <Badge variant="outline" className="text-xs">
+                                {rec.category}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm leading-relaxed text-muted-foreground">{rec.description}</p>
                           {rec.impact && (
@@ -543,7 +630,14 @@ export function AnalysisResults({ data }: AnalysisResultsProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No recommendations available</p>
+                <div className="rounded-lg bg-muted/50 p-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    No recommendations available. Click to generate AI-powered insights.
+                  </p>
+                  <Button onClick={fetchRecommendations} size="sm">
+                    Generate Recommendations
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
