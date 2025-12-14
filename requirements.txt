@@ -5,3 +5,5 @@ openai
 anthropic
 gitpython
 groq
+requests 
+python-dotenv
